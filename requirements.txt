@@ -1,0 +1,20 @@
+# Core libraries
+numpy>=1.19.0
+opencv-python>=4.5.0
+RPi.GPIO>=0.7.0
+picamera>=1.13
+Pillow>=8.0.0
+
+# AI and Computer Vision
+ultralytics>=8.0.0
+torch>=1.7.0
+torchvision>=0.8.0
+
+# Robot control
+robot-hat>=0.1.0  # Custom library for robot hardware
+vilib>=0.1.0      # Vision library for Pi
+
+# Utilities
+matplotlib>=3.3.0
+pyyaml>=5.4.0
+tqdm>=4.41.0

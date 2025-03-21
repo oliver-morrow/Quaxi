@@ -1,7 +1,8 @@
 import cv2
 import numpy as np
 import threading
-from picamera2 import Picamera2
+import io2
+from picamera import PiCamera
 from perception.vision import ObjectDetector
 from sensors.line_detector import get_line_position
 from sensors.distance_sensor import measure_distance
@@ -10,8 +11,15 @@ def vision_processing_thread(sensor_system):
     """Background thread for continuous visual processing"""
     while sensor_system.is_running:
         # Capture frame and process with AI
-        frame = sensor_system.camera.capture_array()
+        stream = io.BytesIO()
+        sensor_system.camera.capture(stream, format='jpeg')
+        # Convert the picture into a numpy array
+        data = np.frombuffer(stream.getvalue(), dtype=np.uint8)
+        # Convert to an OpenCV image
+        frame = cv2.imdecode(data, 1)
         sensor_system.vision_module.process_frame(frame)
+        stream.seek(0)
+        stream.truncate()
 
 class IntegratedSensorSystem:
     """Manages all sensor subsystems on the vehicle"""
@@ -22,11 +30,10 @@ class IntegratedSensorSystem:
         self.is_running = False
         self.vision_module = ObjectDetector()
         
-        # Initialize camera
-        self.camera = Picamera2()
-        self.camera.configure(self.camera.create_still_configuration(
-            main={"size": (640, 640), "format": "RGB888"}))
-        self.camera.start()
+        # Initialize camera with old PiCamera API
+        self.camera = PiCamera()
+        self.camera.resolution = (640, 640)
+        self.camera.framerate = 24
         
         # Thread for vision processing
         self.vision_thread = None
@@ -46,7 +53,10 @@ class IntegratedSensorSystem:
     def analyze_scene(self):
         """Perform general scene analysis on camera input"""
         # Get current frame
-        current_image = self.camera.capture_array()
+        stream = io.BytesIO()
+        self.camera.capture(stream, format='jpeg')
+        data = np.frombuffer(stream.getvalue(), dtype=np.uint8)
+        current_image = cv2.imdecode(data, 1)
         if current_image is None:
             return 0
         
