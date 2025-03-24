@@ -1,0 +1,8 @@
+car
+sign_oneway_left
+sign_oneway_right
+duck_specialty
+sign_yield
+sign_noentry
+sign_stop
+duck_regular
