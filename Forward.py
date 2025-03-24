@@ -18,45 +18,52 @@ turnTimer=0
 timeToLive=0
 
 # move camera and return closest sign
-def trackSign(aiData,controller):
-  global camAngle
-  if(aiData is None):
-    return None
+def trackSign(aiData, controller):
+    global camAngle
+    if not aiData:
+        return None
 
-  largestArea=0
-  closestSign=None
-  delta=0
+    largestArea = 0
+    closestSign = None
+    delta = 0
 
-  for r in aiData:
-    for b in r.boxes:
-      if(b.conf<0.70):
-        continue
-      if(float(b.xywh[0][2])*float(b.xywh[0][3])>largestArea):
-        if(re.search("^sign_.*$",classes[int(b.cls[0])]) is not None):
-          largestArea=b.xywh[0][2]*b.xywh[0][3]
-          closestSign=b
-      print(b.xywhn)
-      print(controller.speed)
-      print(math.exp(-camAngle/MAX_ANGLE/2))
-      if(float(b.xywhn[0][0])>0.5):
-        delta=controller.speed/15-math.exp(-camAngle/MAX_ANGLE/2)
-      else:
-        delta=-controller.speed/15-math.exp(camAngle/MAX_ANGLE/2)
-      delta*=40/180
-      print(delta)
+    for obj in aiData:
+        # Skip objects with low confidence
+        if obj.score < 0.7:
+            continue
+            
+        # Check if it's a sign
+        if "sign_" in obj.label:
+            # Calculate area of bounding box
+            width = obj.bbox.xmax - obj.bbox.xmin
+            height = obj.bbox.ymax - obj.bbox.ymin
+            area = width * height
+            
+            if area > largestArea:
+                largestArea = area
+                closestSign = obj
+                
+        # Calculate camera angle adjustment
+        center_x = (obj.bbox.xmin + obj.bbox.xmax) / 2
+        normalized_x = center_x / 640  # Assuming 640px width image
+        
+        if normalized_x > 0.5:
+            delta = controller.speed/15 - math.exp(-camAngle/MAX_ANGLE/2)
+        else:
+            delta = -controller.speed/15 - math.exp(camAngle/MAX_ANGLE/2)
+        delta *= 40/180
+        print(delta)
 
-  
+    camAngle = max(min(MAX_ANGLE, camAngle+delta), -MAX_ANGLE)
+    print(camAngle)
+    if closestSign is None:
+        camAngle = 0
 
-  camAngle=max(min(MAX_ANGLE,camAngle+delta),-MAX_ANGLE)
-  print(camAngle)
-  if(closestSign is None):
-    camAngle=0
-
-  controller.turnCam(camAngle)
-  return closestSign
+    controller.turnCam(camAngle)
+    return closestSign
 
 def dodge():
-  return False
+  return False  # This needs implementation for obstacle avoidance
 
 # return true if unable to continue without checking long term, false otherwise
 def Forward(controller,sensors,iteration,distance):
@@ -88,9 +95,9 @@ def Forward(controller,sensors,iteration,distance):
   sign=trackSign(aiData,controller)
 
   # store last known sign somewhere since cam might see it when we are besides it
-  if(sign is not None and 1):# at sign
-    signType=classes[int(sign.cls[0])]
-    if signType=='sign_noentry':
+  if sign is not None:
+    signType = sign.label
+    if signType == 'sign_noentry':
       return 1
     elif signType == 'sign_oneway_left':
       if(NEXT_STATE==State.TurnR):

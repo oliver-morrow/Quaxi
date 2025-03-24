@@ -1,41 +1,70 @@
 from globals import PATH_DATA
 from pathfinding import a_star_search, find_nearest_node
-import ShortTerm
+import globals
 
 class NodeTraversal:
     def __init__(self):
-        pass  # No car integration for now
-
-    def transitionState(self,state):
-        ShortTerm.stateTransition=False
-        ShortTerm.CURRENT_STATE=state
-        ShortTerm.stateStartIteration=0
-        ShortTerm.relativeIteration=0
-
-    def executeInstruction(self,instruction):
-        command, value = instruction
-        state=ShortTerm.State.Wait
-        if(command=="forwards" or command=="Straight"):
-            state=ShortTerm.State.Forward
-        elif(command=="turn_right"):
-            state=ShortTerm.State.TurnR
-        elif(command=="turn_left"):
-            state=ShortTerm.State.TurnL
-        elif(command=="wait"):
-            state=ShortTerm.State.Wait
+        # This will be populated from main.py
+        self.short_term = None
         
-        self.transitionState(state)
-        ShortTerm.value=value
+    def set_controller(self, controller):
+        self.short_term = controller
 
-        while(ShortTerm.stateTransition==False):
-            # TODO update current position
-            ShortTerm.iteration()
-            # ShortTerm.stateTransition=True
-            continue
+    def transitionState(self, state):
+        if self.short_term:
+            self.short_term.stateTransition = False
+            self.short_term.CURRENT_STATE = state
+            self.short_term.stateStartIteration = 0
+            self.short_term.relativeIteration = 0
+        else:
+            # Fallback to global vars for backward compatibility
+            import ShortTermController as ShortTerm
+            ShortTerm.stateTransition = False
+            ShortTerm.CURRENT_STATE = state
+            ShortTerm.stateStartIteration = 0
+            ShortTerm.relativeIteration = 0
 
+    def executeInstruction(self, instruction):
+        command, value = instruction
+        
+        if self.short_term:
+            state = globals.State.Wait
+            if command == "forwards" or command == "straight":
+                state = globals.State.Forward
+            elif command == "turn_right":
+                state = globals.State.TurnR
+            elif command == "turn_left":
+                state = globals.State.TurnL
+            elif command == "wait":
+                state = globals.State.Wait
+            
+            self.transitionState(state)
+            self.short_term.value = value
 
+            while not self.short_term.stateTransition:
+                # TODO update current position
+                self.short_term.iteration()
+                continue
+        else:
+            # Fallback to global vars for backward compatibility
+            import ShortTermController as ShortTerm
+            state = ShortTerm.State.Wait
+            if command == "forwards" or command == "straight":
+                state = ShortTerm.State.Forward
+            elif command == "turn_right":
+                state = ShortTerm.State.TurnR
+            elif command == "turn_left":
+                state = ShortTerm.State.TurnL
+            elif command == "wait":
+                state = ShortTerm.State.Wait
+            
+            self.transitionState(state)
+            ShortTerm.value = value
 
-        return
+            while not ShortTerm.stateTransition:
+                # TODO update current position
+                ShortTerm.iteration()
+                continue
 
     def execute_path(self, start_node, dest_x, dest_y):
         """
@@ -87,11 +116,14 @@ class NodeTraversal:
                 next_node = path[index + 2]
             else:
                 break
-        self.transitionState(ShortTerm.State.Wait)
-        ShortTerm.iteration()
-
-
-
+                
+        if self.short_term:
+            self.transitionState(globals.State.Wait)
+            self.short_term.iteration()
+        else:
+            import ShortTermController as ShortTerm
+            self.transitionState(ShortTerm.State.Wait)
+            ShortTerm.iteration()
 
 # ✅ **Test the function**
 if __name__ == "__main__":
