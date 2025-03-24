@@ -50,48 +50,23 @@ def convert_annotation(dir_path, output_path, image_path):
         b = (float(xmlbox.find('xmin').text), float(xmlbox.find('xmax').text), float(xmlbox.find('ymin').text), float(xmlbox.find('ymax').text))
         bb = convert((w,h), b)
         out_file.write(str(cls_id) + " " + " ".join([str(a) for a in bb]) + '\n')
-    
-    in_file.close()
-    out_file.close()
 
-def process_dataset():
-    """Process the entire dataset with progress reporting"""
-    # go to location of dataset
-    cwd = getcwd()
-    print(f"Working directory: {cwd}")
+# go to location of dataset
+cwd = getcwd()
 
-    for dir_path in dirs:
-        full_dir_path = cwd + '/' + dir_path
-        output_path = full_dir_path +'/yolo/'
-        
-        print(f"Processing directory: {dir_path}")
-        print(f"Looking for images in: {full_dir_path}")
+for dir_path in dirs:
+    full_dir_path = cwd + '/' + dir_path
+    output_path = full_dir_path +'/yolo/'
 
-        if not os.path.exists(output_path):
-            os.makedirs(output_path)
-            print(f"Created output directory: {output_path}")
+    if not os.path.exists(output_path):
+        os.makedirs(output_path)
 
-        image_paths = getImagesInDir(full_dir_path)
-        print(f"Found {len(image_paths)} images")
-        
-        if len(image_paths) == 0:
-            print(f"Warning: No images found in {full_dir_path}")
-            continue
-            
-        list_file = open(full_dir_path + '.txt', 'w')
+    image_paths = getImagesInDir(full_dir_path)
+    list_file = open(full_dir_path + '.txt', 'w')
 
-        for i, image_path in enumerate(image_paths):
-            if i % 100 == 0:
-                print(f"Processing image {i+1}/{len(image_paths)}")
-                
-            list_file.write(image_path + '\n')
-            try:
-                convert_annotation(full_dir_path, output_path, image_path)
-            except Exception as e:
-                print(f"Error processing {image_path}: {e}")
-                
-        list_file.close()
-        print(f"Finished processing: {dir_path}")
+    for image_path in image_paths:
+        list_file.write(image_path + '\n')
+        convert_annotation(full_dir_path, output_path, image_path)
+    list_file.close()
 
-if __name__ == "__main__":
-    process_dataset()
+    print("Finished processing: " + dir_path)
