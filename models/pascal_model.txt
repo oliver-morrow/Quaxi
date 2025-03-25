@@ -1,0 +1,8 @@
+Car
+One way left sign
+One way right sign
+Special Duck
+Yield Sign
+do not enter sign
+Stop Sign
+small duck
