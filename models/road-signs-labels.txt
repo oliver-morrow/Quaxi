@@ -1,6 +1,0 @@
-0: duck_regular
-1: sign_noentry
-2: sign_oneway_left
-3: sign_oneway_right
-4: sign_stop
-5: sign_yield

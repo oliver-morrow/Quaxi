@@ -4,7 +4,7 @@ from DrivingModule import CarController
 from picarx import Picarx
 from globals import Zone,State,Node,CURRENT_STATE,CURRENT_ZONE
 
-from Forward import Forward
+from Forward import Forward, TurnR, TurnL
 
 
 currentPosition=None
@@ -21,14 +21,6 @@ stateTransition=False
 def Wait():
   car.turn_right(0,0)
   return True
-def TurnR():
-  # check what angle to put servo
-  car.turn_right()
-  return 1
-def TurnL():
-  # check what angle to put servo
-  car.turn_left()
-  return 1
 def RoundAbout():
   # more complex logic
   return
@@ -48,9 +40,9 @@ def iteration():
   elif(CURRENT_STATE==State.Forward):
     stateTransition=Forward(car,sensors,relativeIteration,value)
   elif(CURRENT_STATE==State.TurnR):
-    stateTransition=TurnR()
+    stateTransition=TurnR(car,sensors,relativeIteration, value)
   elif(CURRENT_STATE==State.TurnL):
-    stateTransition=TurnL()
+    stateTransition=TurnL(car,sensors,relativeIteration, value)
   elif(CURRENT_STATE==State.RoundAbout):
     stateTransition=RoundAbout()
   elif(CURRENT_STATE==State.Park):

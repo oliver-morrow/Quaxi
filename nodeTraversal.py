@@ -15,7 +15,7 @@ class NodeTraversal:
     def executeInstruction(self,instruction):
         command, value = instruction
         state=ShortTerm.State.Wait
-        if(command=="forwards" or command=="Straight"):
+        if(command=="straight"):
             state=ShortTerm.State.Forward
         elif(command=="turn_right"):
             state=ShortTerm.State.TurnR
@@ -30,7 +30,6 @@ class NodeTraversal:
         while(ShortTerm.stateTransition==False):
             # TODO update current position
             ShortTerm.iteration()
-            # ShortTerm.stateTransition=True
             continue
 
 
@@ -44,12 +43,12 @@ class NodeTraversal:
         """
         # Find nearest destination node
         destination_node = find_nearest_node(dest_x, dest_y)
-        print(f"🎯 Nearest node to ({dest_x}, {dest_y}) is: {destination_node}")
+        print(f"Nearest node to ({dest_x}, {dest_y}) is: {destination_node}")
 
         # Get the path from start_node to destination_node
         path = a_star_search(start_node, destination_node)
         if not path or len(path) < 3:
-            print("❌ No valid path found or path too short!")
+            print("No valid path found or path too short!")
             return
         
         print(f"\n🗺️  Generated Path: {' -> '.join(path)}\n")
@@ -74,8 +73,8 @@ class NodeTraversal:
                             self.executeInstruction(step)
                             print(f"➡️  {command.capitalize()} {value} units/degrees")
                         elif isinstance(step, str):
-                            print(f"🛑 Special Instruction: {step}")
-                    print("✅ Instruction sequence completed.\n")
+                            print(f"Special Instruction: {step}")
+                    print("Instruction sequence completed.\n")
                 else:
                     print(f"⚠️ No movement instructions for {current_node} -> {next_node} via {intersection_node}, proceeding without instructions.")
             
@@ -93,7 +92,7 @@ class NodeTraversal:
 
 
 
-# ✅ **Test the function**
+# Test the function
 if __name__ == "__main__":
     traversal = NodeTraversal()
     ShortTerm.init()

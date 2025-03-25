@@ -3,6 +3,8 @@ class CarController:
         self.car = car
         self.direction=0
         self.speed=0
+        self.camAngle=0
+        self.camTiltAngle=0  # Add tilt angle tracking
 
     def move_forward(self, speed=30):
         self.speed=speed
@@ -27,7 +29,12 @@ class CarController:
     def stop(self):
         self.car.stop()
         self.speed=0
+        
     def turnCam(self,angle):
         self.car.set_cam_pan_angle(angle)
         self.camAngle=angle
+        
+    def tiltCam(self,angle):
+        self.car.set_cam_tilt_angle(angle)
+        self.camTiltAngle=angle
 
