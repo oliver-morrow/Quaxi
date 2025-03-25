@@ -18,7 +18,7 @@ class NodeTraversal:
             self.short_term.relativeIteration = 0
         else:
             # Fallback to global vars for backward compatibility
-            import ShortTermController as ShortTerm
+            import ShortTerm
             ShortTerm.stateTransition = False
             ShortTerm.CURRENT_STATE = state
             ShortTerm.stateStartIteration = 0
@@ -47,7 +47,7 @@ class NodeTraversal:
                 continue
         else:
             # Fallback to global vars for backward compatibility
-            import ShortTermController as ShortTerm
+            import ShortTerm
             state = ShortTerm.State.Wait
             if command == "forwards" or command == "straight":
                 state = ShortTerm.State.Forward
@@ -121,14 +121,19 @@ class NodeTraversal:
             self.transitionState(globals.State.Wait)
             self.short_term.iteration()
         else:
-            import ShortTermController as ShortTerm
+            import ShortTerm
             self.transitionState(ShortTerm.State.Wait)
             ShortTerm.iteration()
 
 # ✅ **Test the function**
 if __name__ == "__main__":
     traversal = NodeTraversal()
-    ShortTerm.init()
+    
+    try:
+        import ShortTerm
+        ShortTerm.init()
+    except ImportError:
+        print("Warning: ShortTerm module not available for direct testing")
 
     # Example: Start at 'PondsideAve.:QuackSt' and go to (585, 135)
     traversal.execute_path("PondsideAve.:QuackSt", 585, 135)

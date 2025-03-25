@@ -1,8 +1,0 @@
-sign_stop
-sign_yield
-sign_noentry
-sign_oneway_left
-sign_oneway_right
-duck_regular
-duck_specialty
-vehicle

@@ -2,7 +2,7 @@ from robot_hat import Pin, ADC, PWM, Servo, fileDB
 from robot_hat import Grayscale_Module, Ultrasonic, utils
 import time
 import os
-
+import threading
 
 def constrain(x, min_val, max_val):
     '''
@@ -27,6 +27,8 @@ class Picarx(object):
     PRESCALER = 10
     TIMEOUT = 0.02
 
+    HEADLIGHT_BRIGHTNESS = 40
+
     # servo_pins: camera_pan_servo, camera_tilt_servo, direction_servo
     # motor_pins: left_swicth, right_swicth, left_pwm, right_pwm
     # grayscale_pins: 3 adc channels
@@ -37,7 +39,11 @@ class Picarx(object):
                 motor_pins:list=['D4', 'D5', 'P13', 'P12'],
                 grayscale_pins:list=['A0', 'A1', 'A2'],
                 ultrasonic_pins:list=['D2','D3'],
+                brake_lights_pin: str = 'P4',
+                turn_signal_pins: list = ['P5', 'P6'],
+                headlight_pin: str = 'P10',
                 config:str=CONFIG,
+                blink_interval: float = 0.5
                 ):
 
         # reset robot_hat
@@ -45,7 +51,7 @@ class Picarx(object):
         time.sleep(0.2)
 
         # --------- config_flie ---------
-        self.config_flie = fileDB(config)
+        self.config_flie = fileDB(config, 777, os.getlogin())
 
         # --------- servos init ---------
         self.cam_pan = Servo(servo_pins[0])
@@ -91,6 +97,97 @@ class Picarx(object):
         # --------- ultrasonic init ---------
         trig, echo= ultrasonic_pins
         self.ultrasonic = Ultrasonic(Pin(trig), Pin(echo, mode=Pin.IN, pull=Pin.PULL_DOWN))
+
+        # --------- brake light init using PWM on a single pin ---------
+        self.brake_light = PWM(brake_lights_pin)
+        self.brake_light.period(self.PERIOD)
+        self.brake_light.prescaler(self.PRESCALER)
+        self.brake_lights_off()
+
+        # --------- turn signal LEDs init using PWM on two pins ---------
+        # turn_signal_pins[0]: left turn signal, turn_signal_pins[1]: right turn signal
+        self.turn_signal_left = PWM(turn_signal_pins[0])
+        self.turn_signal_right = PWM(turn_signal_pins[1])
+        for led in [self.turn_signal_left, self.turn_signal_right]:
+            led.period(self.PERIOD)
+            led.prescaler(self.PRESCALER)
+            led.pulse_width_percent(0)  # start with signals off
+
+        # --------- Turn signal blinking attributes ---------
+        self.blink_interval = blink_interval
+        self._blink_left_stop_event = threading.Event()
+        self._blink_right_stop_event = threading.Event()
+        self._blink_left_thread = None
+        self._blink_right_thread = None
+
+        # Headlight setup (Always On at Low Brightness)
+        self.headlights = PWM(headlight_pin)
+        self.headlights.period(self.PERIOD)
+        self.headlights.prescaler(self.PRESCALER)
+        self.headlights.pulse_width_percent(self.HEADLIGHT_BRIGHTNESS)
+
+    def brake_lights_on(self):
+        # Turn on the brake light LED (set duty cycle to 100%).
+        self.brake_light.pulse_width_percent(100)
+
+    def brake_lights_off(self):
+        # Turn off the brake light LED (set duty cycle to 0%).'''
+        self.brake_light.pulse_width_percent(0)
+
+    # Internal blinking methods for turn signals
+    def _blink_left(self):
+        while not self._blink_left_stop_event.is_set():
+            self.turn_signal_left.pulse_width_percent(100)
+            time.sleep(self.blink_interval)
+            self.turn_signal_left.pulse_width_percent(0)
+            time.sleep(self.blink_interval)
+        # Ensure LED is off when blinking stops
+        self.turn_signal_left.pulse_width_percent(0)
+
+    def _blink_right(self):
+        while not self._blink_right_stop_event.is_set():
+            self.turn_signal_right.pulse_width_percent(100)
+            time.sleep(self.blink_interval)
+            self.turn_signal_right.pulse_width_percent(0)
+            time.sleep(self.blink_interval)
+        # Ensure LED is off when blinking stops
+        self.turn_signal_right.pulse_width_percent(0)
+
+    # Turn signal methods for left signal with blinking
+    def turn_signal_left_on(self):
+        '''Start blinking the left turn signal LED.'''
+        # If already blinking, do nothing
+        if self._blink_left_thread and self._blink_left_thread.is_alive():
+            return
+        # Clear the stop event and start the thread
+        self._blink_left_stop_event.clear()
+        self._blink_left_thread = threading.Thread(target=self._blink_left)
+        self._blink_left_thread.daemon = True
+        self._blink_left_thread.start()
+
+    def turn_signal_left_off(self):
+        '''Stop blinking the left turn signal LED and turn it off.'''
+        self._blink_left_stop_event.set()
+        if self._blink_left_thread:
+            self._blink_left_thread.join()
+        self.turn_signal_left.pulse_width_percent(0)
+
+    # Turn signal methods for right signal with blinking
+    def turn_signal_right_on(self):
+        '''Start blinking the right turn signal LED.'''
+        if self._blink_right_thread and self._blink_right_thread.is_alive():
+            return
+        self._blink_right_stop_event.clear()
+        self._blink_right_thread = threading.Thread(target=self._blink_right)
+        self._blink_right_thread.daemon = True
+        self._blink_right_thread.start()
+
+    def turn_signal_right_off(self):
+        '''Stop blinking the right turn signal LED and turn it off.'''
+        self._blink_right_stop_event.set()
+        if self._blink_right_thread:
+            self._blink_right_thread.join()
+        self.turn_signal_right.pulse_width_percent(0)
         
     def set_motor_speed(self, motor, speed):
         ''' set motor speed
@@ -100,6 +197,8 @@ class Picarx(object):
         param speed: speed
         type speed: int      
         '''
+        self.brake_lights_off()
+
         speed = constrain(speed, -100, 100)
         motor -= 1
         if speed >= 0:
@@ -192,6 +291,8 @@ class Picarx(object):
             self.set_motor_speed(2, speed)  
 
     def forward(self, speed):
+        self.brake_lights_off()
+
         current_angle = self.dir_current_angle
         if current_angle != 0:
             abs_current_angle = abs(current_angle)
@@ -212,6 +313,9 @@ class Picarx(object):
         '''
         Execute twice to make sure it stops
         '''
+        self.brake_lights_on()
+        self.turn_signal_left_off()
+        self.turn_signal_right_off()
         for _ in range(2):
             self.motor_speed_pins[0].pulse_width_percent(0)
             self.motor_speed_pins[1].pulse_width_percent(0)
@@ -239,7 +343,7 @@ class Picarx(object):
 
     def get_cliff_status(self,gm_val_list):
         for i in range(0,3):
-            if gm_val_list[i]<=self.cliff_reference[i]:
+            if gm_val_list[i<=self.cliff_reference[i]]:
                 return True
         return False
 

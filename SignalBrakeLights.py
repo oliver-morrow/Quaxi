@@ -27,6 +27,14 @@ def signal_left(times = 5, interval = 0.5):
         GPIO.output(Left_Signal, GPIO.LOW)
         time.sleep(interval)
 
+#Function for Right Signal Lights:
+def signal_right(times = 5, interval = 0.5):
+    for _ in range(times):
+        GPIO.output(Right_Signal, GPIO.HIGH)
+        time.sleep(interval)
+        GPIO.output(Right_Signal, GPIO.LOW)
+        time.sleep(interval)
+
 #Function for Break Lights:
 def brake_light(state=True):
     GPIO.output(Brake_Light1, GPIO.HIGH if state else GPIO.LOW)
